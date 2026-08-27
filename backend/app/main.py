@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
+from app.middleware import MaxBodySizeMiddleware
 from app.routers import analyze, bulk_analyze, health
 
 app = FastAPI(title="ResumeSmash", version="0.1.0")
@@ -18,6 +19,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(MaxBodySizeMiddleware, max_bytes=settings.max_request_bytes)
 
 app.include_router(health.router, prefix="/api")
 app.include_router(analyze.router, prefix="/api")

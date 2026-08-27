@@ -24,6 +24,8 @@ from dataclasses import dataclass
 
 import pdfplumber
 
+from app.config import settings
+
 PALE_LUMINANCE_THRESHOLD = 0.92  # 0=black, 1=white; text this close to white reads as invisible
 TINY_FONT_THRESHOLD = 1.5  # points; no legitimate resume body/heading text is this small
 LINE_BREAK_TOLERANCE = 3  # points of vertical drift still considered "the same line"
@@ -107,7 +109,9 @@ def extract_pdf_text_and_hidden_spans(content: bytes) -> tuple[str, list[HiddenT
     clean_pages: list[str] = []
 
     with pdfplumber.open(io.BytesIO(content)) as pdf:
-        for page_num, page in enumerate(pdf.pages, start=1):
+        # Same page cap as extract_text.py, for the same reason: bound worst-case parsing time
+        # against an adversarial file rather than trusting page count to be resume-sized.
+        for page_num, page in enumerate(pdf.pages[: settings.max_pdf_pages], start=1):
             try:
                 words = page.extract_words(extra_attrs=["size", "non_stroking_color"])
             except Exception:

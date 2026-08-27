@@ -28,6 +28,14 @@ toward, so ranking reflects what actually matters for a given role rather than o
   reaches any LLM prompt and reported to the recruiter verbatim, along with a plain regex scan for
   manipulative phrasing in the visible text too. See
   [backend/app/parsing/pdf_integrity.py](backend/app/parsing/pdf_integrity.py).
+- **Guarded against oversized/adversarial uploads.** Per-file size caps, an aggregate
+  request-size limit enforced before any file is even read, a cap on pasted-text fields (which
+  have no file to size-check), a PDF page-count cap, and a check that rejects a "zip bomb" `.docx`
+  by its declared uncompressed size before python-docx ever inflates it. File parsing runs off
+  the event loop with a hard timeout, so a pathological file fails that one request instead of
+  hanging the whole server. See [backend/app/parsing/resolve_upload.py](backend/app/parsing/resolve_upload.py),
+  [backend/app/middleware.py](backend/app/middleware.py), and `max_*`/`file_parse_timeout_seconds`
+  in [backend/app/config.py](backend/app/config.py) for the specific limits.
 
 See [backend/app](backend/app) module docstrings for where each of these decisions lives — they
 carry over the lessons from [this writeup](https://calicomills.github.io/2026/07/27/Teaching-a-Small-Model-to-Withhold-the-Answer.html)
