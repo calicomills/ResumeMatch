@@ -51,13 +51,14 @@ RESUME_PROMPT = """Resume:
 ---
 
 Extract the candidate's profile. Reply with ONLY this JSON shape (fill in real values):
-{{"skills": ["skill1", "skill2"], "years_experience": 0, "education": "short string or empty", "highlights": ["short highlight 1", "short highlight 2"]}}
+{{"skills": ["skill1", "skill2"], "years_experience": 0, "education": "short string or empty", "highlights": ["short highlight 1", "short highlight 2"], "companies": ["employer 1", "employer 2"]}}
 
 Rules:
 - skills: technologies, tools, and competencies actually demonstrated in the resume.
 - years_experience: integer total years of professional experience, estimated from work history dates.
 - education: highest degree + field, one short phrase, or "" if not stated.
 - highlights: up to 5 short (<15 word) notable achievements or responsibilities.
+- companies: past and current employer names, as written on the resume.
 """
 
 # Keep prompts bounded — small models degrade on very long context, and it keeps latency sane.
@@ -78,6 +79,7 @@ class ResumeProfile:
     years_experience: int = 0
     education: str = ""
     highlights: list[str] = field(default_factory=list)
+    companies: list[str] = field(default_factory=list)
 
 
 # Small models sometimes emit a filler token instead of an empty list when there's nothing to
@@ -120,7 +122,7 @@ async def extract_jd_requirements(client: OllamaClientProtocol, jd_text: str) ->
 
 
 async def extract_resume_profile(client: OllamaClientProtocol, resume_text: str) -> ResumeProfile:
-    default = {"skills": [], "years_experience": 0, "education": "", "highlights": []}
+    default = {"skills": [], "years_experience": 0, "education": "", "highlights": [], "companies": []}
     raw = await client.generate_json(
         RESUME_PROMPT.format(text=resume_text[:MAX_CHARS]), RESUME_SYSTEM, default
     )
@@ -135,4 +137,5 @@ async def extract_resume_profile(client: OllamaClientProtocol, resume_text: str)
         years_experience=years_experience,
         education=_as_str(raw.get("education")),
         highlights=_as_str_list(raw.get("highlights"))[:5],
+        companies=_as_str_list(raw.get("companies"))[:15],  # not skill-normalized: names, not skills
     )

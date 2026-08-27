@@ -4,6 +4,14 @@ The match percentage is intentionally never asked of the LLM: a small model aske
 resume a match score" produces an inconsistent number that changes between runs on identical
 input. This is plain arithmetic over the structured fields the LLM already extracted, so the
 same JD/resume pair always gets the same score.
+
+Weights are recruiter-adjustable (see MatchWeights) rather than fixed, but the defaults reproduce
+the original fixed ratios exactly, so nothing changes for a caller that doesn't pass any.
+
+Company matching follows the same rule as skills: the recruiter names companies they value (a
+target list), and matching is plain overlap against what's on the resume — never an LLM judgment
+call about which employers are "impressive." That's a subjective, bias-prone question this app
+doesn't ask a model to answer.
 """
 
 from __future__ import annotations
@@ -15,13 +23,33 @@ from rapidfuzz import fuzz
 from app.skills.extract import JDRequirements, ResumeProfile
 from app.skills.taxonomy import skills_equivalent
 
-# Weights sum to 1.0. Required skills dominate; education is the softest signal.
-WEIGHT_REQUIRED = 0.55
-WEIGHT_NICE_TO_HAVE = 0.15
-WEIGHT_EXPERIENCE = 0.20
-WEIGHT_EDUCATION = 0.10
-
 EDUCATION_FUZZY_THRESHOLD = 60
+COMPANY_FUZZY_THRESHOLD = 80
+
+
+@dataclass
+class MatchWeights:
+    """Relative importance of each scoring dimension. Values are relative, not required to sum
+    to anything in particular — normalized() divides by their total. Defaults reproduce the
+    app's original fixed weighting."""
+
+    required: float = 55
+    nice_to_have: float = 15
+    experience: float = 20
+    education: float = 10
+    companies: float = 0  # 0 by default: irrelevant unless the recruiter names target companies
+
+    def normalized(self) -> MatchWeights:
+        total = self.required + self.nice_to_have + self.experience + self.education + self.companies
+        if total <= 0:
+            return MatchWeights().normalized()
+        return MatchWeights(
+            required=self.required / total,
+            nice_to_have=self.nice_to_have / total,
+            experience=self.experience / total,
+            education=self.education / total,
+            companies=self.companies / total,
+        )
 
 
 @dataclass
@@ -40,6 +68,8 @@ class MatchResult:
     experience_ok: bool = True
     experience_detail: str = ""
     education_ok: bool = True
+    companies_matched: list[str] = field(default_factory=list)
+    companies_missing: list[str] = field(default_factory=list)
     gaps: list[Gap] = field(default_factory=list)
     breakdown: dict[str, float] = field(default_factory=dict)
 
@@ -54,7 +84,27 @@ def _split_matches(required: list[str], resume_skills: list[str]) -> tuple[list[
     return matched, missing
 
 
-def compute_match(jd: JDRequirements, resume: ResumeProfile) -> MatchResult:
+def _split_company_matches(
+    target_companies: list[str], resume_companies: list[str]
+) -> tuple[list[str], list[str]]:
+    matched, missing = [], []
+    for target in target_companies:
+        if any(fuzz.WRatio(target.lower(), rc.lower()) >= COMPANY_FUZZY_THRESHOLD for rc in resume_companies):
+            matched.append(target)
+        else:
+            missing.append(target)
+    return matched, missing
+
+
+def compute_match(
+    jd: JDRequirements,
+    resume: ResumeProfile,
+    weights: MatchWeights | None = None,
+    target_companies: list[str] | None = None,
+) -> MatchResult:
+    w = (weights or MatchWeights()).normalized()
+    target_companies = target_companies or []
+
     required_matched, required_missing = _split_matches(jd.required_skills, resume.skills)
     nice_matched, nice_missing = _split_matches(jd.nice_to_have_skills, resume.skills)
 
@@ -83,11 +133,22 @@ def compute_match(jd: JDRequirements, resume: ResumeProfile) -> MatchResult:
         education_ok = similarity >= EDUCATION_FUZZY_THRESHOLD
         education_score = 1.0 if education_ok else 0.4  # partial credit; education is soft signal
 
+    if not target_companies:
+        # No target list from the recruiter: this dimension has no signal to contribute. Scored
+        # neutral (1.0) rather than penalizing every candidate equally for a criterion nobody set.
+        companies_score = 1.0
+        companies_matched: list[str] = []
+        companies_missing: list[str] = []
+    else:
+        companies_matched, companies_missing = _split_company_matches(target_companies, resume.companies)
+        companies_score = len(companies_matched) / len(target_companies)
+
     weighted = (
-        required_score * WEIGHT_REQUIRED
-        + nice_score * WEIGHT_NICE_TO_HAVE
-        + experience_score * WEIGHT_EXPERIENCE
-        + education_score * WEIGHT_EDUCATION
+        required_score * w.required
+        + nice_score * w.nice_to_have
+        + experience_score * w.experience
+        + education_score * w.education
+        + companies_score * w.companies
     )
     score = round(weighted * 100)
 
@@ -108,11 +169,14 @@ def compute_match(jd: JDRequirements, resume: ResumeProfile) -> MatchResult:
         experience_ok=experience_ok,
         experience_detail=experience_detail,
         education_ok=education_ok,
+        companies_matched=companies_matched,
+        companies_missing=companies_missing,
         gaps=gaps,
         breakdown={
             "required_skills": round(required_score, 3),
             "nice_to_have_skills": round(nice_score, 3),
             "experience": round(experience_score, 3),
             "education": round(education_score, 3),
+            "companies": round(companies_score, 3),
         },
     )

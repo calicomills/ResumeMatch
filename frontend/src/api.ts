@@ -109,13 +109,33 @@ export interface BulkCandidateResult {
   education_ok: boolean | null;
   years_experience: number | null;
   resume_skills: string[];
+  companies_matched: string[];
+  companies_missing: string[];
   hidden_text_found: boolean;
   suspicious_phrases_found: boolean;
   error: string | null;
 }
 
+export interface MatchWeights {
+  required: number;
+  niceToHave: number;
+  experience: number;
+  education: number;
+  companies: number;
+}
+
+export const DEFAULT_WEIGHTS: MatchWeights = {
+  required: 55,
+  niceToHave: 15,
+  experience: 20,
+  education: 10,
+  companies: 0,
+};
+
 export interface BulkAnalyzeResponse {
   jd_requirements: JDRequirements;
+  weights_used: { required: number; nice_to_have: number; experience: number; education: number; companies: number };
+  target_companies: string[];
   candidates: BulkCandidateResult[];
   failed: BulkCandidateResult[];
 }
@@ -159,12 +179,21 @@ export async function bulkAnalyze(input: {
   jdText: string;
   jdFile: File | null;
   resumeFiles: File[];
+  weights: MatchWeights;
+  targetCompanies: string;
 }): Promise<BulkAnalyzeResponse> {
   const form = new FormData();
   if (input.jdFile) form.append("jd_file", input.jdFile);
   else if (input.jdText.trim()) form.append("jd_text", input.jdText);
 
   for (const file of input.resumeFiles) form.append("resume_files", file);
+
+  form.append("weight_required", String(input.weights.required));
+  form.append("weight_nice_to_have", String(input.weights.niceToHave));
+  form.append("weight_experience", String(input.weights.experience));
+  form.append("weight_education", String(input.weights.education));
+  form.append("weight_companies", String(input.weights.companies));
+  if (input.targetCompanies.trim()) form.append("target_companies", input.targetCompanies);
 
   return postForm<BulkAnalyzeResponse>("/api/bulk-analyze", form);
 }

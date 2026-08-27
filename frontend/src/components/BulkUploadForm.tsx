@@ -1,9 +1,13 @@
 import { useState, type FormEvent } from "react";
+import { DEFAULT_WEIGHTS, type MatchWeights } from "../api";
+import { WeightControls } from "./WeightControls";
 
 export interface BulkAnalyzeInput {
   jdText: string;
   jdFile: File | null;
   resumeFiles: File[];
+  weights: MatchWeights;
+  targetCompanies: string;
 }
 
 interface Props {
@@ -15,6 +19,8 @@ export function BulkUploadForm({ onSubmit, disabled }: Props) {
   const [jdText, setJdText] = useState("");
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [resumeFiles, setResumeFiles] = useState<File[]>([]);
+  const [weights, setWeights] = useState<MatchWeights>(DEFAULT_WEIGHTS);
+  const [targetCompanies, setTargetCompanies] = useState("");
 
   const hasJd = Boolean(jdText.trim() || jdFile);
   const hasResumes = resumeFiles.length > 0;
@@ -23,7 +29,7 @@ export function BulkUploadForm({ onSubmit, disabled }: Props) {
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!canSubmit || disabled) return;
-    onSubmit({ jdText, jdFile, resumeFiles });
+    onSubmit({ jdText, jdFile, resumeFiles, weights, targetCompanies });
   }
 
   return (
@@ -77,6 +83,14 @@ export function BulkUploadForm({ onSubmit, disabled }: Props) {
           )}
         </div>
       </div>
+
+      <WeightControls
+        weights={weights}
+        onChange={setWeights}
+        targetCompanies={targetCompanies}
+        onTargetCompaniesChange={setTargetCompanies}
+        disabled={disabled}
+      />
 
       <button type="submit" className="primary-button" disabled={disabled || !canSubmit}>
         {disabled ? "Ranking…" : `Rank ${resumeFiles.length || ""} Candidate${resumeFiles.length === 1 ? "" : "s"}`}

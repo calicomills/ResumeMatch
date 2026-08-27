@@ -6,6 +6,10 @@ links in the resume — powered by a small, self-hosted Qwen model so nothing le
 infrastructure. A bulk mode takes one JD and many resumes at once and returns a shortlist ranked
 by match percentage, with a one-click drill-down into the full analysis for any candidate.
 
+The match score's weighting is recruiter-adjustable in bulk mode — sliders for required skills,
+nice-to-have skills, experience, education, and (optionally) a list of target companies to weight
+toward, so ranking reflects what actually matters for a given role rather than one fixed formula.
+
 ## How it works
 
 - **Deterministic where possible.** The match percentage, skill overlap, and which links are

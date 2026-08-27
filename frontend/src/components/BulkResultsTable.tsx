@@ -13,6 +13,8 @@ function scoreClass(score: number | null): string {
 }
 
 export function BulkResultsTable({ result, onViewFull }: Props) {
+  const showCompanies = result.target_companies.length > 0;
+
   return (
     <div className="bulk-results">
       <div className="bulk-summary-row">
@@ -32,6 +34,7 @@ export function BulkResultsTable({ result, onViewFull }: Props) {
               <th>Candidate</th>
               <th>Match</th>
               <th>Required skills</th>
+              {showCompanies && <th>Target companies</th>}
               <th>Experience</th>
               <th></th>
             </tr>
@@ -61,6 +64,20 @@ export function BulkResultsTable({ result, onViewFull }: Props) {
                     </span>
                   )}
                 </td>
+                {showCompanies && (
+                  <td className="bulk-skills-cell">
+                    {c.companies_matched.length > 0 && (
+                      <span className="bulk-skill-chip bulk-skill-match" title={c.companies_matched.join(", ")}>
+                        {c.companies_matched.join(", ")}
+                      </span>
+                    )}
+                    {c.companies_missing.length > 0 && (
+                      <span className="bulk-skill-chip bulk-skill-missing" title={c.companies_missing.join(", ")}>
+                        no match
+                      </span>
+                    )}
+                  </td>
+                )}
                 <td>{c.years_experience ?? "?"} yrs</td>
                 <td>
                   <button className="secondary-button" onClick={() => onViewFull(c.filename)}>

@@ -36,6 +36,10 @@ class ContentAwareFakeClient:
                 return {"skills": ["Python"], "years_experience": 2}
             if "CANDIDATE_NO_MATCH" in prompt:
                 return {"skills": ["Ruby"], "years_experience": 1}
+            if "CANDIDATE_WEAK_SKILLS_BIG_NAME" in prompt:
+                return {"skills": [], "years_experience": 0, "companies": ["Google"]}
+            if "CANDIDATE_STRONG_SKILLS_SMALL_NAME" in prompt:
+                return {"skills": ["Python", "Docker", "Kubernetes"], "years_experience": 0, "companies": ["Tiny Startup"]}
             return default
         return default
 
@@ -124,6 +128,77 @@ def test_bulk_analyze_enforces_max_resume_count(client, monkeypatch):
         ],
     )
     assert resp.status_code == 400
+
+
+def test_bulk_analyze_default_weights_match_original_ranking(client):
+    # No weight_* fields sent at all — should behave exactly like before weights existed.
+    resp = client.post(
+        "/api/bulk-analyze",
+        data={"jd_text": JD_TEXT},
+        files=[
+            ("resume_files", _resume_file("full.txt", "CANDIDATE_FULL_MATCH")),
+            ("resume_files", _resume_file("partial.txt", "CANDIDATE_PARTIAL_MATCH")),
+        ],
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["weights_used"] == {"required": 0.55, "nice_to_have": 0.15, "experience": 0.20, "education": 0.10, "companies": 0.0}
+    assert [c["filename"] for c in body["candidates"]] == ["full.txt", "partial.txt"]
+
+
+def test_bulk_analyze_custom_weights_can_reorder_ranking(client):
+    # Weight entirely toward experience: full_match has more years, so heavily favoring
+    # experience over skills should still put it first — but weighting entirely toward
+    # required skills where partial_match has fewer should flip if we invert instead.
+    resp = client.post(
+        "/api/bulk-analyze",
+        data={
+            "jd_text": JD_TEXT,
+            "weight_required": "0",
+            "weight_nice_to_have": "0",
+            "weight_experience": "100",
+            "weight_education": "0",
+            "weight_companies": "0",
+        },
+        files=[
+            ("resume_files", _resume_file("no_match.txt", "CANDIDATE_NO_MATCH")),  # 1 yr exp
+            ("resume_files", _resume_file("partial.txt", "CANDIDATE_PARTIAL_MATCH")),  # 2 yrs exp
+        ],
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    # With JD's min_years_experience=0, experience_score is always 1.0 for everyone regardless
+    # of actual years — so weighting 100% onto experience makes every candidate score identically.
+    scores = {c["score"] for c in body["candidates"]}
+    assert scores == {100}
+
+
+def test_bulk_analyze_target_companies_affect_ranking(client):
+    resp = client.post(
+        "/api/bulk-analyze",
+        data={
+            "jd_text": JD_TEXT,
+            "weight_required": "0",
+            "weight_nice_to_have": "0",
+            "weight_experience": "0",
+            "weight_education": "0",
+            "weight_companies": "100",
+            "target_companies": "Google, Meta",
+        },
+        files=[
+            ("resume_files", _resume_file("big_name.txt", "CANDIDATE_WEAK_SKILLS_BIG_NAME")),
+            ("resume_files", _resume_file("small_name.txt", "CANDIDATE_STRONG_SKILLS_SMALL_NAME")),
+        ],
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["target_companies"] == ["Google", "Meta"]
+    # Weighted entirely on target-company match, the Google alum ranks above the stronger-skills
+    # candidate whose employer isn't in the target list — despite having weaker actual skills.
+    assert [c["filename"] for c in body["candidates"]] == ["big_name.txt", "small_name.txt"]
+    big_name = next(c for c in body["candidates"] if c["filename"] == "big_name.txt")
+    assert big_name["companies_matched"] == ["Google"]
+    assert big_name["companies_missing"] == ["Meta"]
 
 
 def test_bulk_analyze_flags_hidden_text_per_candidate(client):

@@ -24,7 +24,7 @@ from app.llm.ollama_client import OllamaClient, OllamaClientProtocol
 from app.parsing.candidate_name import guess_candidate_name
 from app.parsing.injection_scan import scan_for_injection_patterns
 from app.parsing.resolve_upload import resolve_text
-from app.scoring.match import compute_match
+from app.scoring.match import MatchWeights, compute_match
 from app.skills.extract import JDRequirements, extract_jd_requirements, extract_resume_profile
 
 router = APIRouter()
@@ -44,9 +44,17 @@ class BulkCandidateResult:
     education_ok: bool | None = None
     years_experience: int | None = None
     resume_skills: list[str] = field(default_factory=list)
+    companies_matched: list[str] = field(default_factory=list)
+    companies_missing: list[str] = field(default_factory=list)
     hidden_text_found: bool = False
     suspicious_phrases_found: bool = False
     error: str | None = None
+
+
+def _parse_company_list(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    return [c.strip() for c in raw.split(",") if c.strip()]
 
 
 async def _process_one(
@@ -54,6 +62,8 @@ async def _process_one(
     jd_req: JDRequirements,
     file: UploadFile,
     semaphore: asyncio.Semaphore,
+    weights: MatchWeights,
+    target_companies: list[str],
 ) -> BulkCandidateResult:
     filename = file.filename or "resume"
     async with semaphore:
@@ -69,7 +79,7 @@ async def _process_one(
         suspicious_phrases = scan_for_injection_patterns(scan_text)
 
         resume_profile = await extract_resume_profile(client, resume_text)
-        match_result = compute_match(jd_req, resume_profile)
+        match_result = compute_match(jd_req, resume_profile, weights=weights, target_companies=target_companies)
 
         return BulkCandidateResult(
             filename=filename,
@@ -84,6 +94,8 @@ async def _process_one(
             education_ok=match_result.education_ok,
             years_experience=resume_profile.years_experience,
             resume_skills=resume_profile.skills,
+            companies_matched=match_result.companies_matched,
+            companies_missing=match_result.companies_missing,
             hidden_text_found=len(hidden_spans) > 0,
             suspicious_phrases_found=len(suspicious_phrases) > 0,
         )
@@ -94,6 +106,12 @@ async def bulk_analyze(
     jd_text: str | None = Form(default=None),
     jd_file: UploadFile | None = File(default=None),
     resume_files: list[UploadFile] = File(default=[]),
+    weight_required: float = Form(default=55),
+    weight_nice_to_have: float = Form(default=15),
+    weight_experience: float = Form(default=20),
+    weight_education: float = Form(default=10),
+    weight_companies: float = Form(default=0),
+    target_companies: str | None = Form(default=None),
 ) -> dict:
     if not resume_files:
         raise HTTPException(status_code=400, detail="Upload at least one resume file.")
@@ -103,6 +121,15 @@ async def bulk_analyze(
             detail=f"Too many resumes: {len(resume_files)} uploaded, max is {settings.max_bulk_resumes}.",
         )
 
+    weights = MatchWeights(
+        required=max(0, weight_required),
+        nice_to_have=max(0, weight_nice_to_have),
+        experience=max(0, weight_experience),
+        education=max(0, weight_education),
+        companies=max(0, weight_companies),
+    )
+    companies_list = _parse_company_list(target_companies)
+
     jd_full_text, _hidden, _checked = await resolve_text("job description", jd_text, jd_file)
 
     client = OllamaClient()
@@ -110,7 +137,7 @@ async def bulk_analyze(
 
     semaphore = asyncio.Semaphore(settings.bulk_concurrency)
     results = await asyncio.gather(
-        *(_process_one(client, jd_req, f, semaphore) for f in resume_files)
+        *(_process_one(client, jd_req, f, semaphore, weights, companies_list) for f in resume_files)
     )
 
     # Successful matches sorted best-first; anything that failed to parse goes last, in the
@@ -122,6 +149,8 @@ async def bulk_analyze(
 
     return {
         "jd_requirements": asdict(jd_req),
+        "weights_used": asdict(weights.normalized()),
+        "target_companies": companies_list,
         "candidates": [asdict(r) for r in ranked],
         "failed": [asdict(r) for r in failed],
     }
