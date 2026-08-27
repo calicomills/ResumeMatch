@@ -18,7 +18,9 @@ export function UploadForm({ onSubmit, disabled }: Props) {
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
 
-  const canSubmit = Boolean((jdText.trim() || jdFile) && (resumeText.trim() || resumeFile));
+  const hasJd = Boolean(jdText.trim() || jdFile);
+  const hasResume = Boolean(resumeText.trim() || resumeFile);
+  const canSubmit = hasJd && hasResume;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -68,6 +70,13 @@ export function UploadForm({ onSubmit, disabled }: Props) {
       <button type="submit" className="primary-button" disabled={disabled || !canSubmit}>
         {disabled ? "Analyzing…" : "Analyze Match"}
       </button>
+      {!disabled && !canSubmit && (
+        <p className="form-hint">
+          {!hasJd && !hasResume && "Add a job description and a resume to continue."}
+          {!hasJd && hasResume && "Add a job description above to continue."}
+          {hasJd && !hasResume && "Add a resume above to continue."}
+        </p>
+      )}
     </form>
   );
 }

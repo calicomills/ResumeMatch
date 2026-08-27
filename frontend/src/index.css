@@ -323,6 +323,13 @@ body {
   cursor: not-allowed;
 }
 
+.form-hint {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: -0.5rem 0 0;
+}
+
 /* Loading / error */
 
 .loading-note {

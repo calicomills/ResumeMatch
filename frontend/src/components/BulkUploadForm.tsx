@@ -16,7 +16,9 @@ export function BulkUploadForm({ onSubmit, disabled }: Props) {
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [resumeFiles, setResumeFiles] = useState<File[]>([]);
 
-  const canSubmit = Boolean((jdText.trim() || jdFile) && resumeFiles.length > 0);
+  const hasJd = Boolean(jdText.trim() || jdFile);
+  const hasResumes = resumeFiles.length > 0;
+  const canSubmit = hasJd && hasResumes;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -79,6 +81,13 @@ export function BulkUploadForm({ onSubmit, disabled }: Props) {
       <button type="submit" className="primary-button" disabled={disabled || !canSubmit}>
         {disabled ? "Ranking…" : `Rank ${resumeFiles.length || ""} Candidate${resumeFiles.length === 1 ? "" : "s"}`}
       </button>
+      {!disabled && !canSubmit && (
+        <p className="form-hint">
+          {!hasJd && !hasResumes && "Add a job description and select resume files to continue."}
+          {!hasJd && hasResumes && "Add a job description above to continue."}
+          {hasJd && !hasResumes && "Select at least one resume file above to continue."}
+        </p>
+      )}
     </form>
   );
 }
