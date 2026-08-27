@@ -1,0 +1,18 @@
+Jane Doe
+Backend Software Engineer
+
+github.com/janedoe
+janedoe.dev
+linkedin.com/in/janedoe
+
+Experience
+Software Engineer, Acme Corp (2019 - 2023)
+- Built and maintained REST APIs in Python using Django and PostgreSQL
+- Containerized services with Docker for local dev and CI
+- Collaborated with product to ship customer-facing features
+
+Education
+B.S. in Computer Science, State University, 2019
+
+Skills
+Python, Django, PostgreSQL, Docker, Git, REST API design

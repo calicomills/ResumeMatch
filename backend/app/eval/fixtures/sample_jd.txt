@@ -1,0 +1,18 @@
+Backend Engineer — Platform Team
+
+We're looking for a Backend Engineer to help build and scale our core platform.
+
+Requirements (must-have):
+- 3+ years of professional software engineering experience
+- Strong proficiency in Python
+- Experience building REST APIs with FastAPI or a similar framework
+- Hands-on experience with PostgreSQL
+- Experience with Docker for local development and deployment
+- Bachelor's degree in Computer Science or equivalent practical experience
+
+Nice to have:
+- Experience with Kubernetes
+- Familiarity with AWS
+- Exposure to machine learning or LLM-based systems
+
+You'll work closely with product and design to ship reliable, well-tested backend services.

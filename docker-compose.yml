@@ -1,0 +1,36 @@
+# Local dev / smoke-testing. Mirrors the two-service Railway layout: an `ollama` service holding
+# the model (persisted on a named volume so it's only pulled once) and an `app` service serving
+# the API + built frontend from one container.
+#
+# First `docker compose up --build` will run `ollama pull ${MODEL_NAME}` (~1GB download) —
+# confirm you want that before running it.
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        until ollama list >/dev/null 2>&1; do sleep 1; done
+        ollama pull "${MODEL_NAME:-qwen2.5:1.5b-instruct}"
+        wait
+
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      MODEL_NAME: ${MODEL_NAME:-qwen2.5:1.5b-instruct}
+    depends_on:
+      - ollama
+
+volumes:
+  ollama_data:
