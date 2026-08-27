@@ -72,8 +72,22 @@ export interface ResumeProfile {
   highlights: string[];
 }
 
+export interface HiddenTextSpan {
+  text: string;
+  reason: "white_on_white" | "tiny_font" | "off_page";
+  page: number;
+}
+
+export interface IntegrityCheck {
+  checked: boolean;
+  hidden_text_found: boolean;
+  hidden_text_spans: HiddenTextSpan[];
+  suspicious_phrases: string[];
+}
+
 export interface AnalyzeResponse {
   candidate_name: string | null;
+  integrity: IntegrityCheck;
   match: MatchResult;
   jd_requirements: JDRequirements;
   resume_profile: ResumeProfile;

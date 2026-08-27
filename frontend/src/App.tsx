@@ -5,6 +5,7 @@ import { MatchGauge } from "./components/MatchGauge";
 import { SkillsBreakdown } from "./components/SkillsBreakdown";
 import { InterviewQuestions } from "./components/InterviewQuestions";
 import { BackgroundCheck } from "./components/BackgroundCheck";
+import { IntegrityWarning } from "./components/IntegrityWarning";
 
 function App() {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
@@ -52,6 +53,7 @@ function App() {
       {result && (
         <section className="results">
           {result.candidate_name && <h2 className="candidate-name">{result.candidate_name}</h2>}
+          <IntegrityWarning integrity={result.integrity} />
           <div className="results-top">
             <MatchGauge score={result.match.score} />
             <div className="results-summary">

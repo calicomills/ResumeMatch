@@ -195,6 +195,63 @@ body {
   font-size: 1.3rem;
 }
 
+.integrity-note {
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  font-size: 0.9rem;
+}
+
+.integrity-ok {
+  background: var(--good-bg);
+  color: var(--good);
+  text-align: center;
+}
+
+.integrity-warn {
+  background: var(--bad-bg);
+  border: 1px solid var(--bad);
+  color: var(--text);
+}
+
+.integrity-warn > strong {
+  color: var(--bad);
+}
+
+.integrity-warn p {
+  color: var(--text-muted);
+  margin: 0.4rem 0 0.8rem;
+}
+
+.integrity-section h4 {
+  margin: 0.6rem 0 0.4rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.integrity-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.integrity-reason {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.integrity-note blockquote {
+  margin: 0.2rem 0 0;
+  padding: 0.4rem 0.7rem;
+  border-left: 3px solid var(--bad);
+  background: var(--surface);
+  font-style: italic;
+}
+
 .results-top {
   display: flex;
   gap: 2rem;
