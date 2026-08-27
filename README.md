@@ -3,7 +3,8 @@
 A recruiter uploads a job description and a resume; ResumeSmash returns a match percentage, a
 gap-analysis of what to probe in the interview, and a quick background check of any GitHub/site
 links in the resume — powered by a small, self-hosted Qwen model so nothing leaves your own
-infrastructure.
+infrastructure. A bulk mode takes one JD and many resumes at once and returns a shortlist ranked
+by match percentage, with a one-click drill-down into the full analysis for any candidate.
 
 ## How it works
 
