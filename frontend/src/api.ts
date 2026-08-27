@@ -96,9 +96,48 @@ export interface AnalyzeResponse {
   background_check: { github_profiles: GithubProfile[]; websites: WebsiteCheck[]; summary: string };
 }
 
+export interface BulkCandidateResult {
+  filename: string;
+  candidate_name: string | null;
+  score: number | null;
+  required_matched: string[];
+  required_missing: string[];
+  nice_to_have_matched: string[];
+  nice_to_have_missing: string[];
+  experience_ok: boolean | null;
+  experience_detail: string;
+  education_ok: boolean | null;
+  years_experience: number | null;
+  resume_skills: string[];
+  hidden_text_found: boolean;
+  suspicious_phrases_found: boolean;
+  error: string | null;
+}
+
+export interface BulkAnalyzeResponse {
+  jd_requirements: JDRequirements;
+  candidates: BulkCandidateResult[];
+  failed: BulkCandidateResult[];
+}
+
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 export class AnalyzeError extends Error {}
+
+async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const resp = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });
+  if (!resp.ok) {
+    let detail = resp.statusText;
+    try {
+      const body = await resp.json();
+      detail = body.detail ?? detail;
+    } catch {
+      /* response wasn't JSON; keep statusText */
+    }
+    throw new AnalyzeError(detail);
+  }
+  return resp.json();
+}
 
 export async function analyze(input: {
   jdText: string;
@@ -113,18 +152,21 @@ export async function analyze(input: {
   if (input.resumeFile) form.append("resume_file", input.resumeFile);
   else if (input.resumeText.trim()) form.append("resume_text", input.resumeText);
 
-  const resp = await fetch(`${API_BASE}/api/analyze`, { method: "POST", body: form });
-  if (!resp.ok) {
-    let detail = resp.statusText;
-    try {
-      const body = await resp.json();
-      detail = body.detail ?? detail;
-    } catch {
-      /* response wasn't JSON; keep statusText */
-    }
-    throw new AnalyzeError(detail);
-  }
-  return resp.json();
+  return postForm<AnalyzeResponse>("/api/analyze", form);
+}
+
+export async function bulkAnalyze(input: {
+  jdText: string;
+  jdFile: File | null;
+  resumeFiles: File[];
+}): Promise<BulkAnalyzeResponse> {
+  const form = new FormData();
+  if (input.jdFile) form.append("jd_file", input.jdFile);
+  else if (input.jdText.trim()) form.append("jd_text", input.jdText);
+
+  for (const file of input.resumeFiles) form.append("resume_files", file);
+
+  return postForm<BulkAnalyzeResponse>("/api/bulk-analyze", form);
 }
 
 export interface HealthResponse {

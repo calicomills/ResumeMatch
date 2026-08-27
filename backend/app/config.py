@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     # Upload limits
     max_upload_bytes: int = 5 * 1024 * 1024  # 5MB
+    max_bulk_resumes: int = 50
+    bulk_concurrency: int = 3  # bounded so a big batch doesn't hammer a single self-hosted Ollama
 
     # Optional: raises GitHub API rate limit from 60/hr to 5000/hr if set
     github_token: str | None = None

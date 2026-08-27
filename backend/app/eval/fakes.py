@@ -23,6 +23,8 @@ class FakeOllamaClient:
     raise_on_generate: bool = False
     reachable: bool = True
     model_loaded: bool = True
+    jd_extraction_calls: int = 0
+    resume_extraction_calls: int = 0
 
     async def health(self) -> HealthStatus:
         return HealthStatus(
@@ -40,8 +42,10 @@ class FakeOllamaClient:
         # Route based on distinguishing substrings in each module's prompt template, so call
         # ordering under asyncio.gather doesn't matter.
         if "min_years_experience" in prompt:
+            self.jd_extraction_calls += 1
             return self.jd_response if self.jd_response is not None else default
         if "years_experience" in prompt:
+            self.resume_extraction_calls += 1
             return self.resume_response if self.resume_response is not None else default
         if "Write exactly" in prompt:
             return self.questions_response if self.questions_response is not None else default

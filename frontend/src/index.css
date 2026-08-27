@@ -35,7 +35,188 @@ body {
 
 .app-header {
   text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.mode-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
   margin-bottom: 2rem;
+}
+
+.mode-button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-button.mode-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.secondary-button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  border-color: var(--primary);
+}
+
+.back-button {
+  margin-bottom: 1rem;
+}
+
+.bulk-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.bulk-file-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.bulk-results {
+  margin-top: 2rem;
+}
+
+.bulk-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.8rem;
+}
+
+.bulk-failed-count {
+  color: var(--bad);
+}
+
+.bulk-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.bulk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.bulk-table th {
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.bulk-table td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.bulk-table tr:last-child td {
+  border-bottom: none;
+}
+
+.row-flagged {
+  background: var(--bad-bg);
+}
+
+.bulk-candidate-name {
+  font-weight: 600;
+}
+
+.bulk-filename {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.bulk-flag {
+  font-size: 0.75rem;
+  color: var(--bad);
+  margin-top: 0.2rem;
+}
+
+.bulk-score {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.score-good {
+  color: var(--good);
+}
+
+.score-warn {
+  color: var(--warn);
+}
+
+.score-bad {
+  color: var(--bad);
+}
+
+.bulk-skills-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.bulk-skill-chip {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.bulk-skill-match {
+  background: var(--good-bg);
+  color: var(--good);
+}
+
+.bulk-skill-missing {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.bulk-failed-list {
+  margin-top: 1.2rem;
+  font-size: 0.85rem;
+}
+
+.bulk-failed-list h4 {
+  margin: 0 0 0.4rem;
+  color: var(--text-muted);
+}
+
+.bulk-failed-list ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--bad);
 }
 
 .app-header h1 {
