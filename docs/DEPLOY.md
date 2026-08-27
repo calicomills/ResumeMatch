@@ -1,4 +1,4 @@
-# Deploying ResumeMatch
+# Deploying ResumeSmash
 
 Two Railway services in one project: `ollama` (the model, self-hosted) and `app` (FastAPI + the
 built React frontend, served from one container). The `app` service is public; `ollama` is not.

@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.routers import analyze, health
 
-app = FastAPI(title="ResumeMatch", version="0.1.0")
+app = FastAPI(title="ResumeSmash", version="0.1.0")
 
 origins = ["*"] if settings.cors_origins == "*" else [o.strip() for o in settings.cors_origins.split(",")]
 app.add_middleware(

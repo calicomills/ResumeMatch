@@ -35,7 +35,7 @@ class GithubProfile:
 
 
 def _headers() -> dict:
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "ResumeMatch-App"}
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "ResumeSmash-App"}
     if settings.github_token:
         headers["Authorization"] = f"Bearer {settings.github_token}"
     return headers

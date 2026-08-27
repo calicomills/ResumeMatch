@@ -29,7 +29,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>ResumeMatch</h1>
+        <h1>ResumeSmash</h1>
         <p>
           Paste a job description and a resume to get a match score, targeted interview questions,
           and a quick background check of any links in the resume.

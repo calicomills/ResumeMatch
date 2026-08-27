@@ -41,7 +41,7 @@ async def check_website(url: str) -> WebsiteCheck:
         async with httpx.AsyncClient(
             timeout=settings.site_fetch_timeout_seconds,
             follow_redirects=True,
-            headers={"User-Agent": "ResumeMatch-App (recruiter background check)"},
+            headers={"User-Agent": "ResumeSmash-App (recruiter background check)"},
         ) as client:
             async with client.stream("GET", url) as resp:
                 chunks = []
