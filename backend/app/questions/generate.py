@@ -8,6 +8,7 @@ can still use beats a blank result or a retry loop.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from app.llm.ollama_client import OllamaClientProtocol
@@ -30,6 +31,29 @@ gaps between what the job requires and what the resume shows, in priority order:
 Write exactly {n} interview questions, one per gap in order, that help the recruiter probe each
 gap directly. Be specific to the gap, not generic. Reply with ONLY a JSON array of {n} strings.
 """
+
+# Plain English, not a [bracket_tag] — a small model asked to write around "[nice_to_have_skill]"
+# will sometimes just copy that literal token into its answer ("What experience do you have with
+# [nice_to_have_skill] hadoop?") rather than treat it as metadata. _is_usable_question below is
+# the belt-and-suspenders check: even with this wording, a leak is caught, not trusted away.
+_GAP_KIND_DESCRIPTIONS = {
+    "required_skill": "missing required skill",
+    "nice_to_have_skill": "missing nice-to-have skill",
+    "experience": "experience gap",
+    "education": "education gap",
+}
+
+# Catches the failure mode above regardless of prompt wording — any bracketed internal gap-kind
+# token leaking into the model's output means the answer isn't trustworthy prose, so it's treated
+# the same as a too-short or missing response: fall back to the template, don't try to clean it up.
+_LEAKED_TAG_RE = re.compile(
+    r"\[\s*(required_skill|nice_to_have_skill|experience|education)\s*\]", re.IGNORECASE
+)
+
+
+def _is_usable_question(text: str) -> bool:
+    return len(text) >= 10 and not _LEAKED_TAG_RE.search(text)
+
 
 _FALLBACK_TEMPLATES = {
     "required_skill": "Can you walk me through a project where you used {label}? What was your specific role, and how comfortable are you with it today?",
@@ -74,7 +98,9 @@ async def generate_questions(client: OllamaClientProtocol, gaps: list[Gap]) -> l
         return []
 
     selected = _prioritize(gaps)
-    gap_lines = "\n".join(f"{i+1}. [{g.kind}] {g.label}" for i, g in enumerate(selected))
+    gap_lines = "\n".join(
+        f"{i+1}. {_GAP_KIND_DESCRIPTIONS.get(g.kind, g.kind)}: {g.label}" for i, g in enumerate(selected)
+    )
     prompt = PROMPT_TEMPLATE.format(gap_lines=gap_lines, n=len(selected))
 
     raw = await client.generate_json(prompt, SYSTEM, default=[])
@@ -84,12 +110,12 @@ async def generate_questions(client: OllamaClientProtocol, gaps: list[Gap]) -> l
         question_text = None
         if isinstance(raw, list) and i < len(raw):
             candidate = raw[i]
-            if isinstance(candidate, str) and len(candidate.strip()) >= 10:
+            if isinstance(candidate, str) and _is_usable_question(candidate.strip()):
                 question_text = candidate.strip()
             elif isinstance(candidate, dict):
                 # tolerate {"question": "..."} shape too
                 q = candidate.get("question")
-                if isinstance(q, str) and len(q.strip()) >= 10:
+                if isinstance(q, str) and _is_usable_question(q.strip()):
                     question_text = q.strip()
 
         if question_text:

@@ -69,3 +69,47 @@ async def test_technical_required_skill_beats_experience_and_education_gaps():
     fake = FakeOllamaClient(questions_response=None)
     result = await generate_questions(fake, gaps)
     assert result[0].gap_label == "docker"
+
+
+@pytest.mark.asyncio
+async def test_leaked_internal_tag_is_rejected_not_shown_to_recruiter():
+    # Reproduces a real bug: a small model echoed the internal gap-kind marker back verbatim
+    # ("What experience do you have with [nice_to_have_skill] hadoop?") instead of writing prose.
+    gaps = [Gap(kind="nice_to_have_skill", label="hadoop")]
+    fake = FakeOllamaClient(
+        questions_response=["What experience do you have with [nice_to_have_skill] hadoop?"]
+    )
+    result = await generate_questions(fake, gaps)
+    assert len(result) == 1
+    assert result[0].source == "fallback"
+    assert "[nice_to_have_skill]" not in result[0].question
+    assert "hadoop" in result[0].question
+
+
+@pytest.mark.asyncio
+async def test_leaked_tag_check_is_case_insensitive_and_tolerates_spacing():
+    gaps = [Gap(kind="required_skill", label="python")]
+    fake = FakeOllamaClient(questions_response=["Tell me about your [ Required_Skill ] experience."])
+    result = await generate_questions(fake, gaps)
+    assert result[0].source == "fallback"
+
+
+@pytest.mark.asyncio
+async def test_prompt_sent_to_model_never_contains_bracket_tags():
+    # The root-cause fix: the prompt itself shouldn't hand the model something bracket-shaped to
+    # copy in the first place.
+    captured = {}
+
+    class CapturingClient:
+        async def generate_json(self, prompt, system, default):
+            captured["prompt"] = prompt
+            return default
+
+        async def generate(self, prompt, system=None):
+            return ""
+
+    gaps = [Gap(kind="nice_to_have_skill", label="hadoop"), Gap(kind="required_skill", label="python")]
+    await generate_questions(CapturingClient(), gaps)
+    assert "[nice_to_have_skill]" not in captured["prompt"]
+    assert "[required_skill]" not in captured["prompt"]
+    assert "missing nice-to-have skill: hadoop" in captured["prompt"]
