@@ -51,6 +51,7 @@ function App() {
 
       {result && (
         <section className="results">
+          {result.candidate_name && <h2 className="candidate-name">{result.candidate_name}</h2>}
           <div className="results-top">
             <MatchGauge score={result.match.score} />
             <div className="results-summary">

@@ -189,6 +189,12 @@ body {
   gap: 2rem;
 }
 
+.candidate-name {
+  text-align: center;
+  margin: 0;
+  font-size: 1.3rem;
+}
+
 .results-top {
   display: flex;
   gap: 2rem;

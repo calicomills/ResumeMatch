@@ -25,7 +25,10 @@ _URL_RE = re.compile(
     """
 )
 
-# Domains that show up in resumes but aren't meaningful "links" for a background check.
+# Domains that show up in resumes but aren't meaningful "links" for a background check —
+# including degree abbreviations that happen to collide with real TLDs (reported bug: "B.Tech"
+# parsed as a link to b.tech and background-checked, because .tech is a real TLD in
+# _KNOWN_TLDS_HINT below; the same collision exists for "B.Com"/"M.Com" against .com).
 _IGNORE_DOMAINS = {
     "gmail.com",
     "yahoo.com",
@@ -33,6 +36,10 @@ _IGNORE_DOMAINS = {
     "hotmail.com",
     "fonts.googleapis.com",
     "schema.org",
+    "b.tech",
+    "m.tech",
+    "b.com",
+    "m.com",
 }
 
 _KNOWN_TLDS_HINT = re.compile(r"\.(com|org|net|io|dev|me|co|in|ai|app|tech|xyz|info|us|uk|ca)$", re.I)

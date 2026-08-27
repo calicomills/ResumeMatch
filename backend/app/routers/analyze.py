@@ -16,6 +16,7 @@ from app.background_check.github_check import GithubProfile, check_github
 from app.background_check.summarize import generate_background_summary
 from app.background_check.website_check import WebsiteCheck, check_website
 from app.llm.ollama_client import OllamaClient
+from app.parsing.candidate_name import guess_candidate_name
 from app.parsing.extract_text import FileTooLarge, UnsupportedFileType, extract_text_from_upload
 from app.parsing.links import ExtractedLink, extract_links
 from app.questions.generate import generate_questions
@@ -68,6 +69,7 @@ async def analyze(
     resume_full_text = await _resolve_text("resume", resume_text, resume_file)
 
     client = OllamaClient()
+    candidate_name = guess_candidate_name(resume_full_text)
 
     links = extract_links(resume_full_text)
     github_links = [l for l in links if l.kind == "github"][:MAX_GITHUB_CHECKED]
@@ -85,10 +87,11 @@ async def analyze(
 
     questions, background_summary = await asyncio.gather(
         generate_questions(client, match_result.gaps),
-        generate_background_summary(client, github_results, site_results),
+        generate_background_summary(client, github_results, site_results, candidate_name),
     )
 
     return {
+        "candidate_name": candidate_name,
         "match": {
             "score": match_result.score,
             "required_matched": match_result.required_matched,

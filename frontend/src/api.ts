@@ -73,6 +73,7 @@ export interface ResumeProfile {
 }
 
 export interface AnalyzeResponse {
+  candidate_name: string | null;
   match: MatchResult;
   jd_requirements: JDRequirements;
   resume_profile: ResumeProfile;

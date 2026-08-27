@@ -63,6 +63,7 @@ def test_analyze_end_to_end_with_pasted_text(client):
     assert resp.status_code == 200
     body = resp.json()
 
+    assert body["candidate_name"] == "Jane Doe"  # read off the first line of the fixture resume
     assert 0 <= body["match"]["score"] <= 100
     assert "python" in body["match"]["required_matched"]
     assert "fastapi" in body["match"]["required_missing"]  # resume says Django, not FastAPI
