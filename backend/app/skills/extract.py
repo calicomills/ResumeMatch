@@ -3,6 +3,13 @@
 This is the one place the model does real work: pulling fields out of text it has been given.
 Per the writeup's lesson, everything downstream (matching, scoring) is deterministic code, not
 another model call — the model's job here is extraction and phrasing only, never judgment.
+
+years_experience is the one field in the resume prompt below that the LLM is still *asked* for,
+but it's no longer trusted: date arithmetic over several employment ranges is exactly the kind of
+task a small model gets wrong in ways that are hard to predict (observed: 27 years extracted from
+a resume whose own summary says "7.5+ years"). `parsing/experience.py` computes it deterministically
+from regex-parsed date ranges instead; the LLM's answer is only used as a fallback when that parse
+finds nothing.
 """
 
 from __future__ import annotations
@@ -10,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from app.llm.ollama_client import OllamaClientProtocol
+from app.parsing.experience import estimate_years_experience
 from app.skills.taxonomy import normalize_skill
 
 JD_SYSTEM = (
@@ -119,9 +127,12 @@ async def extract_resume_profile(client: OllamaClientProtocol, resume_text: str)
     if not isinstance(raw, dict):
         raw = default
 
+    deterministic_years = estimate_years_experience(resume_text)
+    years_experience = deterministic_years if deterministic_years is not None else _as_int(raw.get("years_experience"))
+
     return ResumeProfile(
         skills=[normalize_skill(s) for s in _as_str_list(raw.get("skills"))],
-        years_experience=_as_int(raw.get("years_experience")),
+        years_experience=years_experience,
         education=_as_str(raw.get("education")),
         highlights=_as_str_list(raw.get("highlights"))[:5],
     )
