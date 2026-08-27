@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 from app.llm.ollama_client import OllamaClientProtocol
 from app.parsing.experience import estimate_years_experience
-from app.skills.taxonomy import normalize_skill
+from app.skills.taxonomy import is_generic_skill, normalize_skill
 
 JD_SYSTEM = (
     "You extract structured hiring requirements from a job description. "
@@ -105,6 +105,14 @@ def _as_str(value: object, default: str = "") -> str:
     return str(value).strip() if isinstance(value, (str, int, float)) else default
 
 
+def _normalize_skills(raw_skills: list[str]) -> list[str]:
+    """Normalize each skill and drop generic filler ("communication", "problem solving", ...) —
+    see taxonomy.GENERIC_SKILLS. Applied here, once, so nothing downstream (scoring, gap
+    computation, interview questions) ever sees them."""
+    normalized = (normalize_skill(s) for s in raw_skills)
+    return [s for s in normalized if not is_generic_skill(s)]
+
+
 async def extract_jd_requirements(client: OllamaClientProtocol, jd_text: str) -> JDRequirements:
     default = {"required_skills": [], "nice_to_have_skills": [], "min_years_experience": 0, "education": ""}
     raw = await client.generate_json(
@@ -114,8 +122,8 @@ async def extract_jd_requirements(client: OllamaClientProtocol, jd_text: str) ->
         raw = default
 
     return JDRequirements(
-        required_skills=[normalize_skill(s) for s in _as_str_list(raw.get("required_skills"))],
-        nice_to_have_skills=[normalize_skill(s) for s in _as_str_list(raw.get("nice_to_have_skills"))],
+        required_skills=_normalize_skills(_as_str_list(raw.get("required_skills"))),
+        nice_to_have_skills=_normalize_skills(_as_str_list(raw.get("nice_to_have_skills"))),
         min_years_experience=_as_int(raw.get("min_years_experience")),
         education=_as_str(raw.get("education")),
     )
@@ -133,7 +141,7 @@ async def extract_resume_profile(client: OllamaClientProtocol, resume_text: str)
     years_experience = deterministic_years if deterministic_years is not None else _as_int(raw.get("years_experience"))
 
     return ResumeProfile(
-        skills=[normalize_skill(s) for s in _as_str_list(raw.get("skills"))],
+        skills=_normalize_skills(_as_str_list(raw.get("skills"))),
         years_experience=years_experience,
         education=_as_str(raw.get("education")),
         highlights=_as_str_list(raw.get("highlights"))[:5],

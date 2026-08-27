@@ -68,3 +68,25 @@ async def test_filler_tokens_are_dropped_not_treated_as_skills():
     result = await extract_jd_requirements(fake, "some JD text")
     assert result.nice_to_have_skills == []
     assert result.required_skills == ["python"]
+
+
+@pytest.mark.asyncio
+async def test_generic_skills_are_filtered_out_of_jd_requirements():
+    fake = FakeOllamaClient(
+        jd_response={
+            "required_skills": ["Python", "Strong Communication", "Problem-Solving Skills", "Docker"],
+            "nice_to_have_skills": ["Teamwork"],
+        }
+    )
+    result = await extract_jd_requirements(fake, "some JD text")
+    assert result.required_skills == ["python", "docker"]
+    assert result.nice_to_have_skills == []
+
+
+@pytest.mark.asyncio
+async def test_generic_skills_are_filtered_out_of_resume_skills():
+    fake = FakeOllamaClient(
+        resume_response={"skills": ["Python", "Excellent communication skills", "Team player", "Kubernetes"]}
+    )
+    result = await extract_resume_profile(fake, "some resume text")
+    assert result.skills == ["python", "kubernetes"]

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from app.llm.ollama_client import OllamaClientProtocol
 from app.scoring.match import Gap
+from app.skills.taxonomy import is_technical_skill
 
 MAX_QUESTIONS = 6
 
@@ -51,9 +52,21 @@ def _fallback(gap: Gap) -> str:
     return template.format(label=gap.label)
 
 
+_SKILL_GAP_KINDS = {"required_skill", "nice_to_have_skill"}
+_KIND_ORDER = {"required_skill": 0, "nice_to_have_skill": 1, "experience": 2, "education": 3}
+
+
+def _priority_key(gap: Gap) -> tuple[int, int]:
+    # Technical skill gaps first (tier 0), everything else after (tier 1) — a recruiter's
+    # question budget is better spent probing a missing technology than a missing business
+    # skill or a soft experience/education gap. Within each tier, the original kind ordering.
+    is_technical_gap = gap.kind in _SKILL_GAP_KINDS and is_technical_skill(gap.label)
+    tier = 0 if is_technical_gap else 1
+    return (tier, _KIND_ORDER.get(gap.kind, 9))
+
+
 def _prioritize(gaps: list[Gap]) -> list[Gap]:
-    order = {"required_skill": 0, "experience": 1, "education": 2, "nice_to_have_skill": 3}
-    return sorted(gaps, key=lambda g: order.get(g.kind, 9))[:MAX_QUESTIONS]
+    return sorted(gaps, key=_priority_key)[:MAX_QUESTIONS]
 
 
 async def generate_questions(client: OllamaClientProtocol, gaps: list[Gap]) -> list[InterviewQuestion]:

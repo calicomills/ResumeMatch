@@ -124,13 +124,29 @@ SKILL_SYNONYMS: dict[str, list[str]] = {
     # Business / soft skills
     "project management": ["pmp"],
     "stakeholder management": [],
-    "communication": ["verbal communication", "written communication"],
+    "communication": [
+        "verbal communication", "written communication", "strong communication",
+        "excellent communication", "communication skills",
+    ],
     "leadership": ["team leadership"],
     "cross-functional collaboration": ["cross functional collaboration"],
     "negotiation": [],
     "public speaking": ["presentation skills"],
-    "problem solving": ["analytical thinking", "analytical skills"],
+    "problem solving": [
+        "analytical thinking", "analytical skills", "problem-solving skills",
+        "critical thinking", "critical thinking skills",
+    ],
     "mentoring": ["coaching"],
+    "teamwork": ["team player", "team work", "collaboration", "collaborative"],
+    "time management": [],
+    "attention to detail": ["detail oriented", "detail-oriented"],
+    "adaptability": ["flexibility", "adaptable"],
+    "interpersonal skills": ["interpersonal"],
+    "work ethic": ["strong work ethic"],
+    "multitasking": [],
+    "organizational skills": ["organization skills", "organized"],
+    "creativity": ["creative thinking", "creative"],
+    "self-motivated": ["self starter", "self-starter", "proactive"],
     "customer success": [],
     "sales": ["b2b sales", "b2c sales"],
     "crm": ["salesforce", "hubspot"],
@@ -140,6 +156,70 @@ SKILL_SYNONYMS: dict[str, list[str]] = {
     "financial modeling": [],
     "accounting": [],
 }
+
+# Canonical skills that are near-universal resume/JD filler — every posting claims them, so a
+# "match" or "gap" on one carries no real signal, and a generated interview question about them
+# ("tell me about your communication skills") isn't a useful use of a recruiter's time either.
+# Filtered out entirely wherever skills get normalized (skills/extract.py) — never reaches
+# scoring or question generation — rather than filtered per-caller, so there's exactly one place
+# this list needs updating.
+GENERIC_SKILLS: frozenset[str] = frozenset(
+    {
+        "communication",
+        "problem solving",
+        "teamwork",
+        "time management",
+        "attention to detail",
+        "adaptability",
+        "interpersonal skills",
+        "work ethic",
+        "multitasking",
+        "organizational skills",
+        "creativity",
+        "self-motivated",
+    }
+)
+
+
+def is_generic_skill(skill: str) -> bool:
+    """True for filler skills like "communication" or "problem solving" that add no matching
+    signal. Checks the normalized form, so phrasing variations (already collapsed by
+    normalize_skill via SKILL_SYNONYMS) are caught without needing to be listed here directly."""
+    return normalize_skill(skill) in GENERIC_SKILLS
+
+
+# The non-technical remainder of the "Business / soft skills" section above (after the generic
+# filler ones are excluded entirely — see GENERIC_SKILLS). Used only to *prefer* technical gaps
+# when generating interview questions (questions/generate.py), not to exclude these — a genuinely
+# required business skill still counts toward the match score.
+NON_TECH_SKILLS: frozenset[str] = frozenset(
+    {
+        "project management",
+        "stakeholder management",
+        "leadership",
+        "cross-functional collaboration",
+        "negotiation",
+        "public speaking",
+        "mentoring",
+        "customer success",
+        "sales",
+        "marketing",
+        "seo",
+        "content strategy",
+        "financial modeling",
+        "accounting",
+    }
+)
+
+
+def is_technical_skill(skill: str) -> bool:
+    """Best-effort technology signal for prioritizing interview questions. Defaults to True for
+    anything not explicitly tagged otherwise: the technology space is far too open-ended to
+    enumerate (a JD can name any language/framework/tool), so it's more robust to maintain the
+    much smaller, closed list of known non-technical business skills instead."""
+    normalized = normalize_skill(skill)
+    return normalized not in NON_TECH_SKILLS and normalized not in GENERIC_SKILLS
+
 
 _ALIAS_TO_CANONICAL: dict[str, str] = {}
 for canonical, aliases in SKILL_SYNONYMS.items():
